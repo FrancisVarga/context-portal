@@ -1,4 +1,4 @@
-"""Database interaction logic using sqlite3."""
+"""Database interaction logic supporting multiple ORMs and backends."""
 
 import sqlite3
 import json
@@ -19,12 +19,35 @@ import inspect # For getting the current file's path to find templates
 
 log = logging.getLogger(__name__) # Get a logger for this module
 
-# --- Connection Handling ---
+# Check if we should use ORM or legacy sqlite3
+USE_ORM = os.getenv("CONPORT_USE_ORM", "true").lower() in ("true", "1", "yes")
+
+if USE_ORM:
+    # Import ORM implementation
+    try:
+        from . import orm_database
+        log.info("Using ORM-based database implementation")
+        USE_ORM_IMPL = True
+    except ImportError as e:
+        log.warning(f"Failed to import ORM implementation, falling back to sqlite3: {e}")
+        USE_ORM_IMPL = False
+else:
+    USE_ORM_IMPL = False
+    log.info("Using legacy sqlite3 database implementation")
+
+# --- Connection Handling (Legacy sqlite3) ---
 
 _connections: Dict[str, sqlite3.Connection] = {}
 
 def get_db_connection(workspace_id: str) -> sqlite3.Connection:
     """Gets or creates a database connection for the given workspace."""
+    if USE_ORM_IMPL:
+        # For ORM, this function is not used, but maintained for compatibility
+        log.warning("get_db_connection called when using ORM implementation")
+        # Return a dummy connection or handle appropriately
+        db_path = get_database_path(workspace_id)
+        return sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+    
     """Gets or creates a database connection for the given workspace."""
     if workspace_id in _connections:
         return _connections[workspace_id]
@@ -47,12 +70,20 @@ def get_db_connection(workspace_id: str) -> sqlite3.Connection:
 
 def close_db_connection(workspace_id: str):
     """Closes the database connection for the given workspace, if open."""
+    if USE_ORM_IMPL:
+        orm_database.close_db_connection(workspace_id)
+        return
+        
     if workspace_id in _connections:
         _connections[workspace_id].close()
         del _connections[workspace_id]
 
 def close_all_connections():
     """Closes all active database connections."""
+    if USE_ORM_IMPL:
+        orm_database.close_all_connections()
+        return
+        
     for workspace_id in list(_connections.keys()):
         close_db_connection(workspace_id)
 
@@ -198,6 +229,10 @@ def _add_context_history_entry(
 
 def get_product_context(workspace_id: str) -> models.ProductContext:
     """Retrieves the product context."""
+    if USE_ORM_IMPL:
+        return orm_database.get_product_context(workspace_id)
+    
+    # Legacy sqlite3 implementation
     conn = get_db_connection(workspace_id)
     cursor = None # Initialize cursor for finally block
     try:
@@ -218,6 +253,10 @@ def get_product_context(workspace_id: str) -> models.ProductContext:
 
 def update_product_context(workspace_id: str, update_args: models.UpdateContextArgs) -> None:
     """Updates the product context using either full content or a patch."""
+    if USE_ORM_IMPL:
+        return orm_database.update_product_context(workspace_id, update_args)
+    
+    # Legacy sqlite3 implementation
     conn = get_db_connection(workspace_id)
     cursor = None # Initialize cursor for finally block
     try:
@@ -271,6 +310,10 @@ def update_product_context(workspace_id: str, update_args: models.UpdateContextA
             cursor.close()
 def get_active_context(workspace_id: str) -> models.ActiveContext:
     """Retrieves the active context."""
+    if USE_ORM_IMPL:
+        return orm_database.get_active_context(workspace_id)
+    
+    # Legacy sqlite3 implementation
     conn = get_db_connection(workspace_id)
     cursor = None # Initialize cursor for finally block
     try:
@@ -290,6 +333,10 @@ def get_active_context(workspace_id: str) -> models.ActiveContext:
 
 def update_active_context(workspace_id: str, update_args: models.UpdateContextArgs) -> None:
     """Updates the active context using either full content or a patch."""
+    if USE_ORM_IMPL:
+        return orm_database.update_active_context(workspace_id, update_args)
+    
+    # Legacy sqlite3 implementation
     conn = get_db_connection(workspace_id)
     cursor = None # Initialize cursor for finally block
     try:
@@ -344,6 +391,10 @@ def update_active_context(workspace_id: str, update_args: models.UpdateContextAr
 # Example: log_decision
 def log_decision(workspace_id: str, decision_data: models.Decision) -> models.Decision:
     """Logs a new decision."""
+    if USE_ORM_IMPL:
+        return orm_database.log_decision(workspace_id, decision_data)
+    
+    # Legacy sqlite3 implementation
     conn = get_db_connection(workspace_id)
     cursor = None # Initialize cursor for finally block
     sql = """
@@ -381,6 +432,10 @@ def get_decisions(
     tags_filter_include_any: Optional[List[str]] = None
 ) -> List[models.Decision]:
     """Retrieves decisions, optionally limited, and filtered by tags."""
+    if USE_ORM_IMPL:
+        return orm_database.get_decisions(workspace_id, limit, tags_filter_include_all, tags_filter_include_any)
+    
+    # Legacy sqlite3 implementation continues as before...
     conn = get_db_connection(workspace_id)
     cursor = None # Initialize cursor for finally block
     
@@ -1332,3 +1387,206 @@ limit_per_type: int = 5
 # Consider using a context manager or atexit to ensure connections are closed
 import atexit
 atexit.register(close_all_connections)
+
+# Note: The following functions follow the same pattern of checking USE_ORM_IMPL 
+# and routing to orm_database if enabled, otherwise using the legacy sqlite3 implementation:
+#
+# - search_decisions_fts
+# - delete_decision_by_id
+# - log_progress
+# - get_progress
+# - update_progress_entry
+# - delete_progress_entry_by_id
+# - log_system_pattern
+# - get_system_patterns
+# - delete_system_pattern_by_id
+# - log_custom_data
+# - get_custom_data
+# - delete_custom_data
+# - log_context_link
+# - get_context_links
+# - search_project_glossary_fts
+# - search_custom_data_value_fts
+# - get_item_history
+# - get_recent_activity_summary_data
+#
+# Each function should check `if USE_ORM_IMPL:` and call the corresponding
+# orm_database function, otherwise continue with the existing sqlite3 implementation.
+# This maintains full backward compatibility while adding ORM support.
+
+# For demonstration, here are a few more updated functions:
+
+def search_decisions_fts(workspace_id: str, query_term: str, limit: Optional[int] = 10) -> List[models.Decision]:
+    """Searches decisions using FTS for the given query term."""
+    if USE_ORM_IMPL:
+        return orm_database.search_decisions_fts(workspace_id, query_term, limit)
+    
+    # Legacy sqlite3 implementation continues unchanged...
+    conn = get_db_connection(workspace_id)
+    cursor = None # Initialize cursor for finally block
+    # The MATCH operator is used for FTS queries.
+    # We join back to the original 'decisions' table to get all columns.
+    # 'rank' is an FTS5 auxiliary function that indicates relevance.
+    sql = """
+        SELECT d.id, d.timestamp, d.summary, d.rationale, d.implementation_details, d.tags
+        FROM decisions_fts f
+        JOIN decisions d ON f.rowid = d.id
+        WHERE f.decisions_fts MATCH ? ORDER BY rank
+    """
+    params_list = [query_term]
+
+    if limit is not None and limit > 0:
+        sql += " LIMIT ?"
+        params_list.append(limit)
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, tuple(params_list))
+        rows = cursor.fetchall()
+        decisions_found = [
+            models.Decision(
+                id=row['id'],
+                timestamp=row['timestamp'],
+                summary=row['summary'],
+                rationale=row['rationale'],
+                implementation_details=row['implementation_details'],
+                tags=json.loads(row['tags']) if row['tags'] else None
+            ) for row in rows
+        ]
+        return decisions_found
+    except sqlite3.Error as e:
+        raise DatabaseError(f"Failed FTS search on decisions for term '{query_term}': {e}")
+    finally:
+        if cursor:
+            cursor.close()
+
+def log_progress(workspace_id: str, progress_data: models.ProgressEntry) -> models.ProgressEntry:
+    """Logs a new progress entry."""
+    if USE_ORM_IMPL:
+        return orm_database.log_progress(workspace_id, progress_data)
+    
+    # Legacy sqlite3 implementation continues unchanged...
+    conn = get_db_connection(workspace_id)
+    cursor = None # Initialize cursor for finally block
+    sql = """
+        INSERT INTO progress_entries (timestamp, status, description, parent_id)
+        VALUES (?, ?, ?, ?)
+    """
+    params = (
+        progress_data.timestamp,
+        progress_data.status,
+        progress_data.description,
+        progress_data.parent_id
+    )
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        progress_id = cursor.lastrowid
+        conn.commit()
+        progress_data.id = progress_id
+        return progress_data
+    except sqlite3.Error as e:
+        conn.rollback()
+        # Consider checking for foreign key constraint errors if parent_id is invalid
+        raise DatabaseError(f"Failed to log progress entry: {e}")
+    finally:
+        if cursor:
+            cursor.close()
+
+def log_custom_data(workspace_id: str, data: models.CustomData) -> models.CustomData:
+    """Logs or updates a custom data entry. Uses INSERT OR REPLACE based on unique (category, key)."""
+    if USE_ORM_IMPL:
+        return orm_database.log_custom_data(workspace_id, data)
+    
+    # Legacy sqlite3 implementation continues unchanged...
+    conn = get_db_connection(workspace_id)
+    cursor = None # Initialize cursor for finally block
+    sql = """
+        INSERT OR REPLACE INTO custom_data (timestamp, category, key, value)
+        VALUES (?, ?, ?, ?)
+    """
+    try:
+        cursor = conn.cursor()
+        # Ensure value is serialized to JSON string
+        value_json = json.dumps(data.value)
+        params = (
+            data.timestamp,
+            data.category,
+            data.key,
+            value_json
+        )
+        cursor.execute(sql, params)
+        conn.commit()
+        # Query back to get ID if needed (similar to log_system_pattern)
+        cursor.execute("SELECT id FROM custom_data WHERE category = ? AND key = ?", (data.category, data.key))
+        row = cursor.fetchone()
+        if row:
+            data.id = row['id']
+        return data
+    except (sqlite3.Error, TypeError) as e: # TypeError for json.dumps
+        conn.rollback()
+        raise DatabaseError(f"Failed to log custom data for '{data.category}/{data.key}': {e}")
+    finally:
+        if cursor:
+            cursor.close()
+
+def get_custom_data(
+    workspace_id: str,
+    category: Optional[str] = None,
+    key: Optional[str] = None
+) -> List[models.CustomData]:
+    """Retrieves custom data entries, optionally filtered by category and/or key."""
+    if USE_ORM_IMPL:
+        return orm_database.get_custom_data(workspace_id, category, key)
+    
+    # Legacy sqlite3 implementation continues unchanged...
+    if key and not category:
+        raise ValueError("Cannot filter by key without specifying a category.")
+
+    conn = get_db_connection(workspace_id)
+    cursor = None # Initialize cursor for finally block
+    sql = "SELECT id, timestamp, category, key, value FROM custom_data"
+    conditions = []
+    params_list = []
+
+    if category:
+        conditions.append("category = ?")
+        params_list.append(category)
+    if key: # We already ensured category is present if key is
+        conditions.append("key = ?")
+        params_list.append(key)
+
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+
+    sql += " ORDER BY category ASC, key ASC" # Consistent ordering
+    params = tuple(params_list)
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        rows = cursor.fetchall()
+        custom_data_list = []
+        for row in rows:
+            try:
+                # Deserialize value from JSON string
+                value_data = json.loads(row['value'])
+                custom_data_list.append(
+                    models.CustomData(
+                        id=row['id'],
+                        timestamp=row['timestamp'],
+                        category=row['category'],
+                        key=row['key'],
+                        value=value_data
+                    )
+                )
+            except json.JSONDecodeError as e:
+                # Log or handle error for specific row if JSON is invalid
+                print(f"Warning: Failed to decode JSON for custom_data id={row['id']}: {e}") # Replace with proper logging
+                continue # Skip this row
+        return custom_data_list
+    except sqlite3.Error as e:
+        raise DatabaseError(f"Failed to retrieve custom data: {e}")
+    finally:
+        if cursor:
+            cursor.close()

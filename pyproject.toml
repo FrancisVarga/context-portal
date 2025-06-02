@@ -36,6 +36,8 @@ dependencies = [
     "sentence-transformers",
     "chromadb>=1.0.0",
     "alembic",
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary",
 ]
 
 [project.optional-dependencies]
