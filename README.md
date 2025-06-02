@@ -448,6 +448,58 @@ When you launch the ConPort server, particularly in STDIO mode (`--mode stdio`),
 
 **Key Takeaway:** ConPort critically relies on an accurate `--workspace_id` to identify the target project. Ensure this argument correctly resolves to the absolute path of your project workspace, either through IDE variables like `${workspaceFolder}` or by providing a direct absolute path.
 
+### Database Configuration for Docker
+
+The Docker image includes both SQLite and PostgreSQL support. By default, it uses PostgreSQL for better performance and features. The database configuration is controlled by environment variables:
+
+**Default PostgreSQL Configuration:**
+- `CONPORT_DB_TYPE=postgresql` (database type)
+- `POSTGRES_HOST=localhost` (database host)
+- `POSTGRES_PORT=5432` (database port)
+- `POSTGRES_USER=conport` (database user)
+- `POSTGRES_PASSWORD=conport` (database password)
+- `POSTGRES_DB=context_portal` (database name)
+
+**To use SQLite instead of PostgreSQL:**
+```bash
+docker run -d \
+  --name conport-server-instance \
+  -p 8000:8000 \
+  -e CONPORT_DB_TYPE=sqlite \
+  -v "/path/to/your/project_workspace:/app/workspace" \
+  greatscottymac/context-portal-mcp:latest \
+  --mode http \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --workspace_id "/app/workspace" \
+  --log-file "/app/workspace/logs/conport.log" \
+  --log-level INFO
+```
+
+**To use custom PostgreSQL settings:**
+```bash
+docker run -d \
+  --name conport-server-instance \
+  -p 8000:8000 \
+  -e POSTGRES_HOST=my-postgres-server \
+  -e POSTGRES_PORT=5432 \
+  -e POSTGRES_USER=myuser \
+  -e POSTGRES_PASSWORD=mypassword \
+  -e POSTGRES_DB=my_context_db \
+  -v "/path/to/your/project_workspace:/app/workspace" \
+  greatscottymac/context-portal-mcp:latest \
+  --mode http \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --workspace_id "/app/workspace" \
+  --log-file "/app/workspace/logs/conport.log" \
+  --log-level INFO
+```
+
+The Docker container automatically initializes PostgreSQL and creates the necessary database and user if they don't exist.
+
+**Security Note:** The default PostgreSQL password (`conport`) is intended for development use only. For production deployments, always override the password using the environment variable `-e POSTGRES_PASSWORD=your_secure_password`.
+
 <br>
 
 For pre-upgrade cleanup, including clearing Python bytecode cache, please refer to the [v0.2.4_UPDATE_GUIDE.md](v0.2.4_UPDATE_GUIDE.md#1-pre-upgrade-cleanup).
