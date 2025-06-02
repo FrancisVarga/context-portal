@@ -88,40 +88,44 @@ We follow a standard GitHub pull request workflow.
 
 ### Building and Publishing Docker Images
 
-If your contribution involves changes to the Docker image or you need to publish a new version, follow these steps:
+#### Automatic Publishing (Recommended)
+
+Docker images are automatically built and published to GitHub Container Registry as part of the release workflow. When you create a release or push to the main branch, the workflow will:
+
+1. Build the Docker image for multiple platforms (linux/amd64, linux/arm64)
+2. Push to GitHub Container Registry at `ghcr.io/francisvarga/context-portal`
+3. Tag with both `latest` and the specific version number
+
+#### Manual Building (For Development/Testing)
+
+If you need to build the Docker image locally for development or testing:
 
 1.  **Ensure Docker is Installed:** Make sure Docker Desktop (or Docker Engine) is installed and running on your system.
 2.  **Build the Docker Image:**
-    Navigate to the root of the `context-portal` repository and use the `build.ps1` script (for PowerShell users) or `docker build` command directly.
+    Navigate to the root of the `context-portal` repository and build the image:
 
-    Using `build.ps1` (recommended for Windows):
-    ```powershell
-    ./build.ps1
-    ```
-    This script handles building the image and tagging it appropriately.
-
-    Manual Docker Build:
     ```bash
-    docker build -t greatscottymac/context-portal-mcp:latest .
+    docker build -t context-portal-local:latest .
     # You can also tag with a specific version:
-    # docker build -t greatscottymac/context-portal-mcp:vX.Y.Z .
+    # docker build -t context-portal-local:vX.Y.Z .
     ```
-3.  **Log in to Docker Hub:**
-    Before pushing, you need to log in to your Docker Hub account from your terminal:
+    
+3.  **Test the Image Locally:**
+    Run the built image to test your changes:
     ```bash
-    docker login
+    docker run --rm -p 8000:8000 -v $(pwd):/app/workspace context-portal-local:latest
     ```
-    You will be prompted to enter your Docker ID and password.
-4.  **Push the Docker Image:**
-    After a successful build and login, push the image to Docker Hub:
-    ```bash
-    docker push greatscottymac/context-portal-mcp:latest
-    # If you tagged with a specific version:
-    # docker push greatscottymac/context-portal-mcp:vX.Y.Z
-    ```
-    This will upload the image to the `greatscottymac/context-portal-mcp` repository on Docker Hub.
-5.  **Verify on Docker Hub:**
-    Confirm that the image has been successfully pushed by checking your Docker Hub repository in your web browser.
+
+#### Published Images
+
+The official Docker images are available at:
+- Latest: `ghcr.io/francisvarga/context-portal:latest`
+- Specific version: `ghcr.io/francisvarga/context-portal:vX.Y.Z`
+
+Pull the latest image:
+```bash
+docker pull ghcr.io/francisvarga/context-portal:latest
+```
 
 ### Documentation Improvements
 

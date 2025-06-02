@@ -45,6 +45,7 @@ jobs:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release)
     permissions:
       contents: write
+      packages: write
     
     steps:
     - uses: actions/checkout@v4
@@ -81,6 +82,29 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
+    - name: Log in to GitHub Container Registry
+      if: steps.check_release.outputs.skip == 'false'
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Docker Buildx
+      if: steps.check_release.outputs.skip == 'false'
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build and push Docker image
+      if: steps.check_release.outputs.skip == 'false'
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/context-portal:latest
+          ghcr.io/${{ github.repository_owner }}/context-portal:${{ steps.get_version.outputs.version }}
+    
     - name: Build package
       if: steps.check_release.outputs.skip == 'false'
       run: |
@@ -107,6 +131,17 @@ jobs:
           - ✅ Batch operations
           - ✅ Error handling and edge cases
           - ✅ Database persistence verification
+          
+          ### Docker Image
+          This release includes Docker images published to GitHub Container Registry:
+          
+          ```bash
+          # Pull the latest image
+          docker pull ghcr.io/${{ github.repository_owner }}/context-portal:latest
+          
+          # Pull a specific version
+          docker pull ghcr.io/${{ github.repository_owner }}/context-portal:${{ steps.get_version.outputs.version }}
+          ```
           
           ### Package Files
           This release includes both wheel and source distributions that can be installed via pip:
