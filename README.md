@@ -351,10 +351,16 @@ The Context Portal MCP server is available as a Docker image, providing a conven
 
 ### Pulling the Docker Image
 
-You can pull the latest Docker image from Docker Hub:
+You can pull the latest Docker image from GitHub Container Registry:
 
 ```bash
-docker pull greatscottymac/context-portal-mcp:latest
+docker pull ghcr.io/francisvarga/context-portal:latest
+```
+
+You can also pull a specific version:
+
+```bash
+docker pull ghcr.io/francisvarga/context-portal:v0.2.5
 ```
 
 ### Running the Docker Image
@@ -413,7 +419,7 @@ Here's an example `mcp_settings.json` configuration for a client that supports D
         "--name", "conport-server-instance",
         "-p", "8000:8000",
         "-v", "${workspaceFolder}:/app/workspace",
-        "greatscottymac/context-portal-mcp:latest",
+        "ghcr.io/francisvarga/context-portal:latest",
         "--mode", "http",
         "--host", "0.0.0.0",
         "--port", "8000",
@@ -467,7 +473,7 @@ docker run -d \
   -p 8000:8000 \
   -e CONPORT_DB_TYPE=sqlite \
   -v "/path/to/your/project_workspace:/app/workspace" \
-  greatscottymac/context-portal-mcp:latest \
+  ghcr.io/francisvarga/context-portal:latest \
   --mode http \
   --host 0.0.0.0 \
   --port 8000 \
@@ -487,7 +493,7 @@ docker run -d \
   -e POSTGRES_PASSWORD=mypassword \
   -e POSTGRES_DB=my_context_db \
   -v "/path/to/your/project_workspace:/app/workspace" \
-  greatscottymac/context-portal-mcp:latest \
+  ghcr.io/francisvarga/context-portal:latest \
   --mode http \
   --host 0.0.0.0 \
   --port 8000 \
