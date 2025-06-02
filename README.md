@@ -351,10 +351,10 @@ The Context Portal MCP server is available as a Docker image, providing a conven
 
 ### Pulling the Docker Image
 
-You can pull the latest Docker image from Docker Hub:
+You can pull the latest Docker image from GitHub Container Registry:
 
 ```bash
-docker pull greatscottymac/context-portal-mcp:latest
+docker pull ghcr.io/francisvarga/context-portal:latest
 ```
 
 ### Running the Docker Image
@@ -370,7 +370,7 @@ docker run -d \
   --name conport-server-instance \
   -p 8000:8000 \
   -v "/path/to/your/project_workspace:/app/workspace" \
-  greatscottymac/context-portal-mcp:latest \
+  ghcr.io/francisvarga/context-portal:latest \
   --mode http \
   --host 0.0.0.0 \
   --port 8000 \
@@ -413,7 +413,7 @@ Here's an example `mcp_settings.json` configuration for a client that supports D
         "--name", "conport-server-instance",
         "-p", "8000:8000",
         "-v", "${workspaceFolder}:/app/workspace",
-        "greatscottymac/context-portal-mcp:latest",
+        "ghcr.io/francisvarga/context-portal:latest",
         "--mode", "http",
         "--host", "0.0.0.0",
         "--port", "8000",
