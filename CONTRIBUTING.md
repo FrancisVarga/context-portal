@@ -96,6 +96,18 @@ The project uses GitHub Actions to automatically:
 1. Build Docker images when a new release is published
 2. Push images to GitHub Container Registry at `ghcr.io/francisvarga/context-portal`
 3. Tag images with both version numbers and `latest`
+4. Scan images for security vulnerabilities using Trivy
+5. Generate Software Bill of Materials (SBOM) for transparency
+
+#### Security Scanning
+
+All Docker images undergo automated security scanning:
+
+- **Vulnerability Scanning**: Uses Trivy to scan for known vulnerabilities in the OS and application dependencies
+- **Severity Filtering**: Builds fail if critical or high-severity vulnerabilities are found
+- **Security Reports**: Scan results are uploaded to GitHub's Security tab for review
+- **SBOM Generation**: Software Bill of Materials is generated and uploaded as build artifacts
+- **Continuous Monitoring**: Security scans run on every release and manual build
 
 To trigger a new Docker image build:
 1. Merge changes to the `main` branch
