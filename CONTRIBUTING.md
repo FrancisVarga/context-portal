@@ -88,40 +88,56 @@ We follow a standard GitHub pull request workflow.
 
 ### Building and Publishing Docker Images
 
-If your contribution involves changes to the Docker image or you need to publish a new version, follow these steps:
+Docker images are automatically built and published to GitHub Container Registry (ghcr.io) when releases are created via the automated release workflow.
+
+#### Automated Docker Publishing
+
+The project uses GitHub Actions to automatically:
+1. Build Docker images when a new release is published
+2. Push images to GitHub Container Registry at `ghcr.io/francisvarga/context-portal`
+3. Tag images with both version numbers and `latest`
+4. Scan images for security vulnerabilities using Trivy
+5. Generate Software Bill of Materials (SBOM) for transparency
+
+#### Security Scanning
+
+All Docker images undergo automated security scanning:
+
+- **Vulnerability Scanning**: Uses Trivy to scan for known vulnerabilities in the OS and application dependencies
+- **Severity Filtering**: Builds fail if critical or high-severity vulnerabilities are found
+- **Security Reports**: Scan results are uploaded to GitHub's Security tab for review
+- **SBOM Generation**: Software Bill of Materials is generated and uploaded as build artifacts
+- **Continuous Monitoring**: Security scans run on every release and manual build
+
+To trigger a new Docker image build:
+1. Merge changes to the `main` branch
+2. The release-please workflow will create a release PR
+3. When the release PR is merged, a new release is published
+4. The Docker image is automatically built and published
+
+#### Manual Docker Building (Development)
+
+For local development and testing:
 
 1.  **Ensure Docker is Installed:** Make sure Docker Desktop (or Docker Engine) is installed and running on your system.
 2.  **Build the Docker Image:**
-    Navigate to the root of the `context-portal` repository and use the `build.ps1` script (for PowerShell users) or `docker build` command directly.
+    Navigate to the root of the `context-portal` repository:
 
-    Using `build.ps1` (recommended for Windows):
-    ```powershell
-    ./build.ps1
-    ```
-    This script handles building the image and tagging it appropriately.
-
-    Manual Docker Build:
     ```bash
-    docker build -t greatscottymac/context-portal-mcp:latest .
+    docker build -t context-portal-mcp:latest .
     # You can also tag with a specific version:
-    # docker build -t greatscottymac/context-portal-mcp:vX.Y.Z .
+    # docker build -t context-portal-mcp:vX.Y.Z .
     ```
-3.  **Log in to Docker Hub:**
-    Before pushing, you need to log in to your Docker Hub account from your terminal:
-    ```bash
-    docker login
-    ```
-    You will be prompted to enter your Docker ID and password.
-4.  **Push the Docker Image:**
-    After a successful build and login, push the image to Docker Hub:
-    ```bash
-    docker push greatscottymac/context-portal-mcp:latest
-    # If you tagged with a specific version:
-    # docker push greatscottymac/context-portal-mcp:vX.Y.Z
-    ```
-    This will upload the image to the `greatscottymac/context-portal-mcp` repository on Docker Hub.
-5.  **Verify on Docker Hub:**
-    Confirm that the image has been successfully pushed by checking your Docker Hub repository in your web browser.
+
+#### Using Published Images
+
+You can pull the published images from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/francisvarga/context-portal:latest
+# Or a specific version:
+# docker pull ghcr.io/francisvarga/context-portal:v0.2.5
+```
 
 ### Documentation Improvements
 
